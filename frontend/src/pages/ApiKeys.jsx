@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Key, Copy, DollarSign } from 'lucide-react'
+import { Plus, Trash2, Key, Copy, Check, DollarSign } from 'lucide-react'
 
 function ApiKeys() {
   const [keys, setKeys] = useState([])
@@ -8,6 +8,7 @@ function ApiKeys() {
   const [newKey, setNewKey] = useState({ alias: '', budget: '' })
   const [createdKey, setCreatedKey] = useState('')
   const [copied, setCopied] = useState(false)
+  const [copiedId, setCopiedId] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   const token = localStorage.getItem('token')
@@ -30,11 +31,7 @@ function ApiKeys() {
     try {
       const res = await fetch('/api/keys', {
         method: 'POST', headers,
-        body: JSON.stringify({
-          key_name: newKey.alias, alias: newKey.alias,
-          budget_limit: newKey.budget ? Number(newKey.budget) : 0,
-          rpm: 60, tpm: 100000,
-        }),
+        body: JSON.stringify({ key_name: newKey.alias, alias: newKey.alias, budget_limit: newKey.budget ? Number(newKey.budget) : 0, rpm: 600, tpm: 10000000 }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -53,16 +50,13 @@ function ApiKeys() {
     } catch {}
   }
 
-  const copyToClipboard = (text) => {
+  const copyText = (text, id) => {
     navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (id) { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000) }
+    else { setCopied(true); setTimeout(() => setCopied(false), 2000) }
   }
 
-  const getBudgetPercent = (used, limit) => {
-    if (!limit || limit === 0) return 0
-    return Math.min((used / limit) * 100, 100)
-  }
+  const getBudgetPercent = (used, limit) => (!limit || limit === 0) ? 0 : Math.min((used / limit) * 100, 100)
 
   return (
     <div>
@@ -72,7 +66,7 @@ function ApiKeys() {
           <p>Create and manage API keys with usage budgets</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setShowModal(true); setCreatedKey('') }}>
-          <Plus size={16} /> New Key
+          <Plus size={15} /> New Key
         </button>
       </div>
 
@@ -80,12 +74,10 @@ function ApiKeys() {
         <div className="empty-state"><p>Loading...</p></div>
       ) : keys.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon"><Key size={48} strokeWidth={1.5} /></div>
+          <div className="empty-state-icon"><Key size={44} strokeWidth={1.5} /></div>
           <h3>No API keys yet</h3>
           <p>Create your first API key to start using the router.</p>
-          <button className="btn btn-primary" onClick={() => { setShowModal(true); setCreatedKey('') }}>
-            <Plus size={16} /> Create Key
-          </button>
+          <button className="btn btn-primary" onClick={() => { setShowModal(true); setCreatedKey('') }}><Plus size={15} /> Create Key</button>
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -106,38 +98,31 @@ function ApiKeys() {
                   const percent = getBudgetPercent(key.budget_used || 0, key.budget_limit || 0)
                   return (
                     <tr key={key.id}>
+                      <td><span className="key-name">{key.key_name || 'Unnamed'}</span></td>
                       <td>
-                        <span style={{ fontWeight: 600 }}>{key.key_name || 'Unnamed'}</span>
-                      </td>
-                      <td>
-                        <code className="table-key-code">{key.key_prefix || '••••••••••'}</code>
+                        <div className="key-field">
+                          <code className="key-field-value">{key.key_prefix || '••••••••••'}</code>
+                          <button className="key-copy-btn" onClick={() => copyText(key.key_prefix, key.id)} title="Copy">
+                            {copiedId === key.id ? <Check size={12} /> : <Copy size={12} />}
+                          </button>
+                        </div>
                       </td>
                       <td>
                         {key.budget_limit > 0
-                          ? <span className="budget-text">${key.budget_limit.toFixed(2)}/mo</span>
-                          : <span className="text-muted">Unlimited</span>
-                        }
+                          ? <span className="budget-text">${key.budget_limit.toFixed(2)}<span className="budget-period">/mo</span></span>
+                          : <span className="text-muted">Unlimited</span>}
                       </td>
                       <td>
                         {key.budget_limit > 0 ? (
                           <div className="table-budget">
                             <span className="budget-text-sm">${(key.budget_used || 0).toFixed(2)}</span>
                             <div className="budget-bar-sm">
-                              <div
-                                className={`budget-bar-fill ${percent > 80 ? 'warning' : ''} ${percent >= 100 ? 'danger' : ''}`}
-                                style={{ width: `${percent}%` }}
-                              />
+                              <div className={`budget-bar-fill ${percent > 80 ? 'warning' : ''} ${percent >= 100 ? 'danger' : ''}`} style={{ width: `${percent}%` }} />
                             </div>
                           </div>
-                        ) : (
-                          <span className="text-muted">—</span>
-                        )}
+                        ) : <span className="text-muted">—</span>}
                       </td>
-                      <td>
-                        <span className="text-muted">
-                          {key.created_at ? new Date(key.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                        </span>
-                      </td>
+                      <td><span className="text-muted">{key.created_at ? new Date(key.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span></td>
                       <td>
                         {deleteConfirm === key.id ? (
                           <div className="table-actions">
@@ -145,7 +130,7 @@ function ApiKeys() {
                             <button className="btn btn-secondary btn-sm" onClick={() => setDeleteConfirm(null)}>Cancel</button>
                           </div>
                         ) : (
-                          <button className="btn-icon-danger" onClick={() => setDeleteConfirm(key.id)} title="Delete key">
+                          <button className="btn-icon-danger" onClick={() => setDeleteConfirm(key.id)} title="Revoke key">
                             <Trash2 size={14} />
                           </button>
                         )}
@@ -165,14 +150,15 @@ function ApiKeys() {
             {createdKey ? (
               <>
                 <div className="modal-success">
-                  <div className="modal-success-icon"><Key size={24} /></div>
+                  <div className="modal-success-icon"><Key size={22} /></div>
                   <h2>Key Created!</h2>
                   <p className="modal-subtitle">Copy this key now — you won't see it again.</p>
                 </div>
                 <div className="key-display">
                   <code>{createdKey}</code>
-                  <button className="btn btn-secondary btn-sm" onClick={() => copyToClipboard(createdKey)}>
-                    <Copy size={14} /> {copied ? 'Copied!' : 'Copy'}
+                  <button className="btn-copy" onClick={() => copyText(createdKey)}>
+                    {copied ? <Check size={13} /> : <Copy size={13} />}
+                    {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
                 <div className="modal-actions">
