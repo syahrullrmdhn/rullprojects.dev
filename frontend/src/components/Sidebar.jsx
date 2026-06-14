@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Key, Boxes, Users, LogOut, Activity } from 'lucide-react'
+import { LayoutDashboard, Key, Boxes, Settings, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 function Sidebar() {
@@ -48,14 +48,9 @@ function Sidebar() {
         <NavLink to="/models" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Boxes size={18} /> Models
         </NavLink>
-        <NavLink to="/status" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-          <Activity size={18} /> Status
+        <NavLink to="/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <Settings size={18} /> Settings
         </NavLink>
-        {user?.is_admin && (
-          <NavLink to="/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            <Users size={18} /> Users
-          </NavLink>
-        )}
       </nav>
 
       <div className="sidebar-bottom">

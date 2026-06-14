@@ -3,15 +3,12 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ApiKeys from './pages/ApiKeys'
 import Models from './pages/Models'
-import Users from './pages/Users'
-import Status from './pages/Status'
+import Settings from './pages/Settings'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token')
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
+  if (!token) return <Navigate to="/login" replace />
   return children
 }
 
@@ -20,19 +17,11 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
+        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="keys" element={<ApiKeys />} />
           <Route path="models" element={<Models />} />
-          <Route path="status" element={<Status />} />
-          <Route path="users" element={<Users />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
