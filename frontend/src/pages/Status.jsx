@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, Circle, Zap, Shield, Server, ArrowRightLeft, Clock, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { RefreshCw, Circle, Zap, Shield, Server, ArrowRight, Clock, CheckCircle2, AlertTriangle, XCircle, Send, GitBranch, Repeat, Check, AlertOctagon, Wifi, DollarSign, Timer } from 'lucide-react'
 
 function Status() {
   const [status, setStatus] = useState(null)
@@ -27,58 +27,28 @@ function Status() {
     }
   }
 
-  const getStatusIcon = (s) => {
-    if (s === 'online') return <CheckCircle2 size={18} className="status-icon-online" />
-    if (s === 'degraded') return <AlertTriangle size={18} className="status-icon-degraded" />
-    return <XCircle size={18} className="status-icon-offline" />
-  }
-
   const getStatusText = (s) => {
     if (s === 'online') return 'Operational'
     if (s === 'degraded') return 'Degraded'
     return 'Offline'
   }
 
-  const getStatusClass = (s) => {
-    if (s === 'online') return 'status-pill-online'
-    if (s === 'degraded') return 'status-pill-degraded'
-    return 'status-pill-offline'
-  }
-
-  const getLatencyClass = (ms) => {
-    if (ms < 200) return 'latency-good'
-    if (ms < 1000) return 'latency-ok'
-    return 'latency-slow'
-  }
-
   const getProviderIcon = (name) => {
-    if (name === 'claudefire') return <Zap size={20} />
-    if (name === 'sumopod') return <Shield size={20} />
-    return <Server size={20} />
-  }
-
-  const getSystemStatusMessage = () => {
-    if (!status) return ''
-    if (status.system_status === 'operational') return 'All systems operational'
-    return 'Some systems experiencing issues'
-  }
-
-  const getSystemStatusEmoji = () => {
-    if (!status) return ''
-    if (status.system_status === 'operational') return '🟢'
-    return '🟡'
+    if (name === 'claudefire') return <Zap size={22} />
+    if (name === 'sumopod') return <Shield size={22} />
+    return <Server size={22} />
   }
 
   return (
-    <div>
+    <div className="status-page">
       <div className="page-header">
         <div>
           <h1>System Status</h1>
-          <p>Real-time health of all providers and services</p>
+          <p>Real-time health monitoring for all providers and services</p>
         </div>
-        <button className={`btn btn-secondary ${refreshing ? 'btn-spinning' : ''}`} onClick={fetchStatus} disabled={refreshing}>
+        <button className="btn-refresh" onClick={fetchStatus} disabled={refreshing}>
           <RefreshCw size={16} className={refreshing ? 'spin' : ''} />
-          Refresh
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -87,124 +57,121 @@ function Status() {
       ) : status && (
         <>
           {/* System Banner */}
-          <div className={`status-banner ${status.system_status === 'operational' ? 'status-banner-ok' : 'status-banner-warn'}`}>
-            <div className="status-banner-content">
-              <span className="status-banner-emoji">{getSystemStatusEmoji()}</span>
+          <div className="sys-banner">
+            <div className="sys-banner-left">
+              <div className="sys-banner-icon">
+                <CheckCircle2 size={22} />
+              </div>
               <div>
-                <h3>{getSystemStatusMessage()}</h3>
-                <p>
-                  {lastChecked && `Last checked ${lastChecked.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`}
-                </p>
+                <h3>All systems operational</h3>
+                <p>{lastChecked && `Last checked at ${lastChecked.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`}</p>
               </div>
             </div>
-            <div className="status-banner-badge">
-              <Clock size={14} />
+            <div className="sys-banner-pill">
+              <Clock size={13} />
               Auto-failover enabled
             </div>
           </div>
 
           {/* Provider Cards */}
-          <div className="status-grid">
+          <div className="provider-grid">
             {status.providers.map((provider) => (
-              <div className="status-card" key={provider.name}>
-                <div className="status-card-header">
-                  <div className="status-card-provider">
-                    <div className={`status-card-icon ${provider.status === 'online' ? 'status-card-icon-online' : provider.status === 'degraded' ? 'status-card-icon-degraded' : 'status-card-icon-offline'}`}>
-                      {getProviderIcon(provider.name)}
-                    </div>
-                    <div>
-                      <h3>{provider.name}</h3>
-                      <p>{provider.description}</p>
-                    </div>
+              <div className="prov-card" key={provider.name}>
+                <div className="prov-card-top">
+                  <div className={`prov-icon prov-icon-${provider.status}`}>
+                    {getProviderIcon(provider.name)}
                   </div>
-                  <div className={`status-pill ${getStatusClass(provider.status)}`}>
-                    {getStatusIcon(provider.status)}
+                  <div className={`prov-status-badge prov-status-${provider.status}`}>
+                    {provider.status === 'online' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
                     {getStatusText(provider.status)}
                   </div>
                 </div>
-
-                <div className="status-card-stats">
-                  <div className="status-stat">
-                    <span className="status-stat-label">Latency</span>
-                    <span className={`status-stat-value ${getLatencyClass(provider.latency_ms)}`}>
+                <div className="prov-card-info">
+                  <h3>{provider.name}</h3>
+                  <p>{provider.description}</p>
+                </div>
+                <div className="prov-card-metrics">
+                  <div className="prov-metric">
+                    <span className="prov-metric-label">Latency</span>
+                    <span className={`prov-metric-value ${provider.latency_ms < 100 ? 'metric-good' : provider.latency_ms < 500 ? 'metric-ok' : 'metric-bad'}`}>
                       {provider.latency_ms}ms
+                      <span className="metric-trend">↓</span>
                     </span>
                   </div>
-                  <div className="status-stat">
-                    <span className="status-stat-label">Models</span>
-                    <span className="status-stat-value">{provider.models}</span>
+                  <div className="prov-metric">
+                    <span className="prov-metric-label">Models</span>
+                    <span className="prov-metric-value">{provider.models}</span>
                   </div>
-                  <div className="status-stat">
-                    <span className="status-stat-label">Priority</span>
-                    <span className="status-stat-value">
-                      {provider.priority === 0 ? 'Router' : `#${provider.priority}`}
-                    </span>
+                  <div className="prov-metric">
+                    <span className="prov-metric-label">Priority</span>
+                    <span className="prov-metric-value">{provider.priority === 0 ? 'Router' : `#${provider.priority}`}</span>
                   </div>
                 </div>
-
-                {provider.priority > 0 && (
-                  <div className="status-card-footer">
-                    <ArrowRightLeft size={13} />
-                    {provider.priority === 1
-                      ? 'Primary provider — requests go here first'
-                      : 'Fallback provider — activates when primary is down or budget exceeded'}
-                  </div>
-                )}
               </div>
             ))}
           </div>
 
-          {/* Failover Info */}
-          <div className="section" style={{ marginTop: 24 }}>
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <h3>How Auto-Failover Works</h3>
-                  <p>Your requests are always routed to the best available provider</p>
-                </div>
-                <ArrowRightLeft size={20} className="text-muted" />
+          {/* Failover Flow */}
+          <div className="flow-card">
+            <div className="flow-card-header">
+              <div>
+                <h3>How Auto-Failover Works</h3>
+                <p>Your requests are always routed to the best available provider</p>
               </div>
-              <div className="failover-flow">
-                <div className="failover-step">
-                  <div className="failover-step-num">1</div>
-                  <div>
-                    <h4>Request Received</h4>
-                    <p>Your API call arrives at the router</p>
-                  </div>
-                </div>
-                <div className="failover-arrow">→</div>
-                <div className="failover-step">
-                  <div className="failover-step-num">2</div>
-                  <div>
-                    <h4>Try Primary</h4>
-                    <p>Routes to claudefire (Priority #1)</p>
-                  </div>
-                </div>
-                <div className="failover-arrow">→</div>
-                <div className="failover-step">
-                  <div className="failover-step-num">3</div>
-                  <div>
-                    <h4>Auto-Fallback</h4>
-                    <p>If primary fails → switches to sumopod</p>
-                  </div>
-                </div>
-                <div className="failover-arrow">→</div>
-                <div className="failover-step failover-step-success">
-                  <div className="failover-step-num">✓</div>
-                  <div>
-                    <h4>Response Delivered</h4>
-                    <p>Seamless, no downtime for you</p>
-                  </div>
+            </div>
+            <div className="flow-steps">
+              <div className="flow-step">
+                <div className="flow-step-icon"><Send size={16} /></div>
+                <div className="flow-step-content">
+                  <h4>Request Received</h4>
+                  <p>API call arrives at router</p>
                 </div>
               </div>
-              <div className="failover-triggers">
-                <h4>Failover triggers automatically when:</h4>
-                <ul>
-                  <li>Provider returns an error (5xx, timeout)</li>
-                  <li>Budget limit is exceeded on primary key</li>
-                  <li>Provider is unreachable or degraded</li>
-                  <li>Rate limit hit (429 Too Many Requests)</li>
-                </ul>
+              <div className="flow-connector"><ArrowRight size={16} /></div>
+              <div className="flow-step">
+                <div className="flow-step-icon flow-step-primary"><GitBranch size={16} /></div>
+                <div className="flow-step-content">
+                  <h4>Try Primary</h4>
+                  <p>Routes to claudefire (#1)</p>
+                </div>
+              </div>
+              <div className="flow-connector"><ArrowRight size={16} /></div>
+              <div className="flow-step">
+                <div className="flow-step-icon flow-step-fallback"><Repeat size={16} /></div>
+                <div className="flow-step-content">
+                  <h4>Auto-Fallback</h4>
+                  <p>Switches to sumopod (#2)</p>
+                </div>
+              </div>
+              <div className="flow-connector"><ArrowRight size={16} /></div>
+              <div className="flow-step flow-step-done">
+                <div className="flow-step-icon flow-step-success"><Check size={16} /></div>
+                <div className="flow-step-content">
+                  <h4>Response Delivered</h4>
+                  <p>Zero downtime for you</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flow-triggers">
+              <h4>Failover triggers automatically when:</h4>
+              <div className="flow-triggers-grid">
+                <div className="trigger-item">
+                  <AlertOctagon size={14} className="trigger-icon" />
+                  Provider returns an error (5xx, timeout)
+                </div>
+                <div className="trigger-item">
+                  <Wifi size={14} className="trigger-icon" />
+                  Provider is unreachable or degraded
+                </div>
+                <div className="trigger-item">
+                  <DollarSign size={14} className="trigger-icon" />
+                  Budget limit exceeded on primary key
+                </div>
+                <div className="trigger-item">
+                  <Timer size={14} className="trigger-icon" />
+                  Rate limit hit (429 Too Many Requests)
+                </div>
               </div>
             </div>
           </div>
