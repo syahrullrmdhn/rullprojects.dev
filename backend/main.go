@@ -107,6 +107,7 @@ func main() {
 		r.Put("/api/users/{id}/role", handleUpdateUserRole)
 		r.Delete("/api/users/{id}", handleDeleteUser)
 		r.Get("/api/me", handleMe)
+		r.Get("/api/status", handleProviderStatus)
 	})
 
 	// Static files (served under /panel/ and / for console domain)

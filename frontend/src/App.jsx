@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import ApiKeys from './pages/ApiKeys'
 import Models from './pages/Models'
 import Users from './pages/Users'
+import Status from './pages/Status'
 import Layout from './components/Layout'
 
 function ProtectedRoute({ children }) {
@@ -30,6 +31,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="keys" element={<ApiKeys />} />
           <Route path="models" element={<Models />} />
+          <Route path="status" element={<Status />} />
           <Route path="users" element={<Users />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

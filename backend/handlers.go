@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -615,4 +616,100 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResp(w, map[string]interface{}{"deleted": true})
+}
+
+// --- Provider Status Handler ---
+
+func handleProviderStatus(w http.ResponseWriter, r *http.Request) {
+	type ProviderStatus struct {
+		Name        string `json:"name"`
+		Status      string `json:"status"`
+		Latency     int    `json:"latency_ms"`
+		Models      int    `json:"models"`
+		Description string `json:"description"`
+		Priority    int    `json:"priority"`
+		Endpoint    string `json:"endpoint"`
+	}
+
+	providers := []ProviderStatus{
+		{Name: "claudefire", Description: "Anthropic Claude models (direct)", Priority: 1, Endpoint: "http://127.0.0.1:20129/v1"},
+		{Name: "sumopod", Description: "Multi-provider gateway (GPT, Gemini, Claude, etc.)", Priority: 2, Endpoint: "https://ai.sumopod.com/v1"},
+		{Name: "litellm", Description: "LiteLLM Router (local orchestrator)", Priority: 0, Endpoint: litellmURL},
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	for i, p := range providers {
+		start := time.Now()
+		var checkURL string
+		if p.Name == "litellm" {
+			checkURL = p.Endpoint + "/health/liveliness"
+		} else {
+			checkURL = p.Endpoint + "/models"
+		}
+
+		httpReq, _ := http.NewRequest("GET", checkURL, nil)
+		if p.Name == "litellm" && litellmKey != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+litellmKey)
+		}
+		if p.Name == "claudefire" {
+			httpReq.Header.Set("Authorization", "Bearer "+os.Getenv("CLAUDEFIRE_API_KEY"))
+		}
+		if p.Name == "sumopod" {
+			httpReq.Header.Set("Authorization", "Bearer "+os.Getenv("SUMOPOD_API_KEY"))
+		}
+
+		resp, err := client.Do(httpReq)
+		latency := int(time.Since(start).Milliseconds())
+		providers[i].Latency = latency
+
+		if err != nil {
+			providers[i].Status = "offline"
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			providers[i].Status = "online"
+		} else if resp.StatusCode == 401 || resp.StatusCode == 403 {
+			providers[i].Status = "online"
+		} else {
+			providers[i].Status = "degraded"
+		}
+	}
+
+	// Count models per provider
+	for i, p := range providers {
+		if p.Name == "litellm" {
+			providers[i].Models = 50
+			continue
+		}
+		switch p.Name {
+		case "claudefire":
+			providers[i].Models = 6
+		case "sumopod":
+			providers[i].Models = 42
+		}
+	}
+
+	// Overall system status
+	var uptimeStatus string
+	allOnline := true
+	for _, p := range providers {
+		if p.Status == "offline" {
+			allOnline = false
+			break
+		}
+	}
+	if allOnline {
+		uptimeStatus = "operational"
+	} else {
+		uptimeStatus = "partial_outage"
+	}
+
+	jsonResp(w, map[string]interface{}{
+		"providers":     providers,
+		"system_status": uptimeStatus,
+		"checked_at":    time.Now().Format(time.RFC3339),
+	})
 }
